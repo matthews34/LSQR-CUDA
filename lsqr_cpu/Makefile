@@ -1,0 +1,1 @@
+g++ -I eigen-3.3.7 lsqr_cpu.cpp
