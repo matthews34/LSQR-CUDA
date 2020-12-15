@@ -34,8 +34,10 @@ void bsr2csr(const cusparseHandle_t &handle, const cusparseDirection_t &dir, con
 	const bsrGPUMatrix &bsrMatrix, csrGPUMatrix &csrMatrix,
 	const int m, const int n, const int blockDim);
 
-void mvOperation(const cusparseHandle_t &handle, const cusparseDirection_t &dir, const cusparseMatDescr_t &descr,
+void bsrmv(cusparseHandle_t &handle, cusparseDirection_t &dir, cusparseMatDescr_t &descr,
 	const float *alpha, const bsrGPUMatrix bsrMatrix, const float *x, const float *beta, float *y);
+void csrmv(cusparseHandle_t &handle, const cusparseMatDescr_t &descr,
+	int m, int n, const float *alpha, const csrGPUMatrix matrix, const float *x, const float *beta, float *y);
 
 csrCPUMatrix matrix_alloc_cpu(int m, int nnz);
 void matrix_free_cpu(csrCPUMatrix &matrix);
@@ -46,3 +48,6 @@ void matrix_free_gpu_bsr(bsrGPUMatrix &matrix);
 
 void matrix_upload(const csrCPUMatrix &src, csrGPUMatrix &dst, int m, int nnz);
 void matrix_download(const csrGPUMatrix &src, csrCPUMatrix &dst, int m, int nnz);
+
+float* randomVector(int n);
+csrCPUMatrix matrixFromCsv(cusparseHandle_t handle, std::string filename, int m, int n);
