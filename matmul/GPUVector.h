@@ -10,12 +10,8 @@ struct GPUVector {
 		cudaMallocManaged(&elements, sizeof(double)*N);
 		cudaMemcpy(elements, data, sizeof(double)*N, cudaMemcpyDefault);
 	}
-	/*
-	__global__ norm_kernel() {
-		
-	}
-	norm(double &a) {
-		
-	}
-	*/
+	double norm();
+	void scale(GPUVector v, const double s);
+	void add(const GPUVector b, GPUVector out);
+	void sub(const GPUVector b, GPUVector out);
 };

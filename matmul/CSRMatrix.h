@@ -54,7 +54,7 @@ struct CSRMatrix {
 		size_t buffer_size = 0;
 		// calculate the required space for the calculation
 		cusparseStat = cusparseCsrmvEx_bufferSize(handle,
- 					CUSPARSE_ALG0,
+ 					CUSPARSE_ALG_MERGE_PATH,
                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                     M,
                     M,
@@ -76,7 +76,7 @@ struct CSRMatrix {
 		CUDASUCCESS(cudaStat);
 		// execute the calculation inside the buffer
         cusparseStat = cusparseCsrmvEx(handle,
-					CUSPARSE_ALG0,
+					CUSPARSE_ALG_MERGE_PATH,
                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                     M,
                     M,
