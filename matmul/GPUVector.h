@@ -11,7 +11,7 @@ struct GPUVector {
 		cudaMemcpy(elements, data, sizeof(double)*N, cudaMemcpyDefault);
 	}
 	double norm();
-	void scale(GPUVector v, const double s);
+	void scale(const double s, GPUVector v);
 	void add(const GPUVector b, GPUVector out);
 	void sub(const GPUVector b, GPUVector out);
 };
