@@ -45,11 +45,18 @@ __global__ void scale_kernel(const double *input, double *output, const int n, c
 	output[i] = input[i] * s;
 }
 
-void GPUVector::scale(const double s, GPUVector v) {
+GPUVector operator*(const GPUVector v, const double s) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
+	dim3 dimGrid((v.n + dimBlock.x - 1) / dimBlock.x);
 
-	scale_kernel<<<dimGrid, dimBlock>>>(elements, v.elements, n, s);
+	GPUVector c(v.n);
+	
+	scale_kernel<<<dimGrid, dimBlock>>>(v.elements, c.elements, v.n, s);
+
+	return c;
+}
+GPUVector operator*(const double s, const GPUVector v) {
+	return v * s;
 }
 
 __global__ void add_kernel(const double *a, const double *b, double *c, double factor) {
@@ -58,16 +65,24 @@ __global__ void add_kernel(const double *a, const double *b, double *c, double f
 	c[i] = a[i] + b[i] * factor;
 }
 
-void GPUVector::add(const GPUVector b, GPUVector out) {
+GPUVector GPUVector::operator+(const GPUVector b) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
-	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, out.elements, 1);
+	GPUVector c(n);
+	
+	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements, 1);
+
+	return c;
 }
 
-void GPUVector::sub(const GPUVector b, GPUVector out) {
+GPUVector GPUVector::operator-(const GPUVector b) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
-	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, out.elements, -1);
+	GPUVector c(n);
+
+	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements, -1);
+
+	return c;
 }

@@ -44,7 +44,7 @@ int main()
 	std::cout << "Calculating x*2.5\n";
 	double *h_v = new double[n];
 	GPUVector d_v(n,x0);
-	x.scale(d_v, 2.5);
+	d_v = x * 2.5;
 	cudaMemcpy(h_v, d_v.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);	
 	std::cout << "x*2.5 = (";
 	for(int i = 0; i < n-1; i++)
@@ -53,7 +53,7 @@ int main()
 
 	//calculate addition
 	std::cout << "Calculating x + x*2.5\n";
-	x.add(d_v, d_v);
+	d_v = x + d_v;
 	cudaMemcpy(h_v, d_v.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);	
 	std::cout << "x + x*2.5 = (";
 	for(int i = 0; i < n-1; i++)
@@ -62,8 +62,8 @@ int main()
 
 	//calculate subtraction
 	std::cout << "Calculating x - x*2.5\n";
-	x.scale(d_v, 2.5);
-	x.sub(d_v, d_v);
+	d_v = 2.5 * x;
+	d_v = x - d_v;
 	cudaMemcpy(h_v, d_v.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);	
 	std::cout << "x - x * 2.5 = (";
 	for(int i = 0; i < n-1; i++)
