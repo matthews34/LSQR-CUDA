@@ -72,7 +72,7 @@ int main()
 
 	//calculate dot product and write it to y
 	std::cout << "Calculating B*x\n";
-	B_csr.dot(x, y);
+	y = B_csr*x;
 
 	//create y_cpu for loading the results from gpu
 	double *y_cpu = new double[m];
@@ -84,7 +84,7 @@ int main()
 
 	//calculate dot product and write it to y
 	std::cout << "Calculating B'*x\n";
-	B_t_csr.dot(x, y);
+	y = B_t_csr*x;
 	
 	from_gpu(y_cpu,y.elements,m);
 	std::cout << "B'*x = (";

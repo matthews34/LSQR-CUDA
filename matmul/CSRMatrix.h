@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "utils.h"
+#include "GPUVector.h"
 
 // CSR and CSC do not differ in that context
 // however CSR gives the transposed matrix as the default!!
@@ -48,7 +49,7 @@ struct CSRMatrix {
 		cudaDeviceSynchronize();
 	}
 	// calculates a dot product between "this" and x and writes it to y
-	void dot(GPUVector &x, GPUVector &y) {
+	void dot(const GPUVector &x, GPUVector &y) {
 		double h_one = 1.0;
 		double h_zero = 0.0;
 		size_t buffer_size = 0;
@@ -93,6 +94,11 @@ struct CSRMatrix {
 			        buffer);
 		CUSPARSESUCCESS(cusparseStat);
 		CUDAFREE(buffer);
+	}
+	GPUVector operator*(const GPUVector &x) {
+		GPUVector y(M);
+		dot(x, y);
+		return y;
 	}
 	// returns a transposed CSRMatrix (basically a CSC Matrix.. it is confusing)
 	CSRMatrix transpose() {
