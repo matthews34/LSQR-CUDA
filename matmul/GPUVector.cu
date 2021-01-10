@@ -26,7 +26,7 @@ double GPUVector::norm() {
 	double h_result;
 	double *d_result;
 
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
 	cudaMalloc(&d_result, sizeof(double));
@@ -46,7 +46,7 @@ __global__ void scale_kernel(const double *input, double *output, const int n, c
 }
 
 GPUVector operator*(const GPUVector v, const double s) {
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((v.n + dimBlock.x - 1) / dimBlock.x);
 
 	GPUVector c(v.n);
@@ -59,30 +59,36 @@ GPUVector operator*(const double s, const GPUVector v) {
 	return v * s;
 }
 
-__global__ void add_kernel(const double *a, const double *b, double *c, double factor) {
+__global__ void add_kernel(const double *a, const double *b, double *c) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 
-	c[i] = a[i] + b[i] * factor;
+	c[i] = a[i] + b[i];
+}
+
+__global__ void sub_kernel(const double *a, const double *b, double *c) {
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+
+	c[i] = a[i] - b[i];
 }
 
 GPUVector GPUVector::operator+(const GPUVector b) {
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
 	GPUVector c(n);
 	
-	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements, 1);
+	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements);
 
 	return c;
 }
 
 GPUVector GPUVector::operator-(const GPUVector b) {
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
 	GPUVector c(n);
 
-	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements, -1);
+	sub_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements);
 
 	return c;
 }
