@@ -95,7 +95,7 @@ void SpMat::dot(GPUVector & x,GPUVector & y ) {
 	// create nnz threads
 	assert(x.n == cols);
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimGrid(2);
+	dim3 dimGrid(dimBlock.x*dimBlock.y/nnz + 1);
 	double *y_nnz;
 	cudaMalloc(&y_nnz, nnz*sizeof(double));
 	dot_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, x.elements, y.elements, rows, cols, y_nnz);
@@ -146,7 +146,7 @@ SpMat::SpMat(SpMat &A) : rows(A.cols), cols(A.rows), nnz(A.nnz) {
 	int *rowNnz;
 	cudaMalloc(&rowNnz,rows*sizeof(int));
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimGrid(2);
+	dim3 dimGrid(dimBlock.x*dimBlock.y/nnz + 1);
 	transpose_row_nnz<<<dimGrid, dimBlock>>>(A.colInd, A.cols, nnz, rowNnz, rowPtr);
 	transpose_kernel<<<dimGrid, dimBlock>>>(A.rowPtr, A.colInd, A.val, colInd, val, A.rows, A.cols, A.nnz, rowNnz, rowPtr);
 	CUDAFREE(rowNnz);
