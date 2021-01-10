@@ -4,11 +4,11 @@
 
 
 struct GPUMatrix {
-	int M, N;
+	int rows, cols;
 	double *elements;
-	GPUMatrix(int n, int m, double *data) : M(m), N(n) {
-		cudaMalloc(&elements, sizeof(double)*M*N);
-		cudaMemcpy(elements, data, sizeof(double)*M*N, cudaMemcpyHostToDevice);
+	GPUMatrix(int n, int m, double *data) : rows(m), cols(n) {
+		cudaMalloc(&elements, sizeof(double)*rows*cols);
+		cudaMemcpy(elements, data, sizeof(double)*rows*cols, cudaMemcpyHostToDevice);
 	}
 	~GPUMatrix() {
 		CUDAFREE(elements);

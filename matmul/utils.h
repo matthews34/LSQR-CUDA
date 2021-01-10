@@ -1,22 +1,19 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include <cusparse.h>
 #include <assert.h>
 
 #define BLOCK_SIZE 16
+#define ZERO 0.000000001
 
 // some garbage collection
 #define FREE(ptr) if(ptr) free(ptr)
 #define CUDAFREE(ptr) if(ptr) cudaFree(ptr)
-#define CUSPARSEFREEHANDLE(ptr) if(ptr) cusparseDestroy(ptr)
-#define CUSPARSEFREEMATRIX(ptr) if(ptr) cusparseDestroyMatDescr(ptr)
 #define CUDASUCCESS(stat) assert(stat == cudaSuccess)
 #define CUSPARSESUCCESS(stat) assert(stat == CUSPARSE_STATUS_SUCCESS)
 
 // status (only for testing)
 extern cudaError_t cudaStat; //= cudaSuccess;
-extern cusparseStatus_t cusparseStat; //= CUSPARSE_STATUS_SUCCESS;
 
 // loads template array to gpu
 template <typename datatype>
