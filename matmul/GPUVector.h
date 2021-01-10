@@ -12,6 +12,7 @@ struct GPUVector {
 	}
 	GPUVector(int N) : n(N) {
 		cudaMallocManaged(&elements, sizeof(double)*N);
+		cudaMemset(elements,0,sizeof(double)*N);
 	}
 	double norm();
 	GPUVector operator+(const GPUVector b);
