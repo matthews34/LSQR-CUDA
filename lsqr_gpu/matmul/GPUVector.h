@@ -7,6 +7,7 @@ struct GPUVector {
 	double *elements;
 	GPUVector() {}
 	GPUVector(int N, double *data) : n(N) {
+		printf("Initializing Vector\n");
 		cudaMallocManaged(&elements, sizeof(double)*N);
 		cudaMemcpy(elements, data, sizeof(double)*N, cudaMemcpyDefault);
 	}

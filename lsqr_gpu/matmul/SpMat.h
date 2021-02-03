@@ -14,6 +14,7 @@ public:
 	SpMat(	int* rowP, int* colI, double* values, 
 			int rows, int cols, int nnz) : 
 			rows(rows), cols(cols), nnz(nnz) {
+				printf("Initializing Matrix\n");
 				cudaMalloc(&rowPtr, (rows + 1) * sizeof(int));
 				cudaMalloc(&colInd, (nnz) * sizeof(int));
 				cudaMalloc(&val, (nnz) * sizeof(double));
