@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <cuda.h>
-#include "matmul\SpMat.h"
-#include "matmul\GPUVector.h"
+#include "matmul/SpMat.h"
+#include "matmul/GPUVector.h"
 #include "lsqr_gpu.h"
 
 
@@ -64,13 +64,11 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
     double phi_hat = beta;
     double rho_hat = alpha;
     // (2) Iteration
-    //int it_max = size(x);
-	int it_max = 2;
+    int it_max = size(x);
 	double epsilon = 0.001;
     double rho, phi, c, s, theta, residual;
     for(int i = 0; i < it_max; i++) {
         // (3) Bidiagonalization
-		Vec scal_u;
         u = dot(A,v) - scale(u,alpha);
         beta = norm(u);
         u = scale(u,1/beta);
@@ -88,7 +86,10 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
         // (5) Update x, w
         x = x + scale(w, phi / rho );
         w = v - scale(w, theta / rho);
-        residual = norm(dot(A,x) - b);
+        residual = 0;
+        Vec residual_vec;
+        residual_vec = dot(A,x) - b;
+        residual = norm(residual_vec);
         if(residual < epsilon) {
             printf("finished after %d iterations\n",i);
             return;

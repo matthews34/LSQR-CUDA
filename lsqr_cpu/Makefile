@@ -1,1 +1,1 @@
-g++ -I eigen-3.3.7 lsqr_cpu.cpp
+g++ -I eigen-3.3.7 lsqr_cpu.cpp -o lsqr_cpu -std=c++11

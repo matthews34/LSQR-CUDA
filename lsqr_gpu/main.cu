@@ -3,9 +3,10 @@
 #include <chrono>
 //#include <cusparse_v2.h>
 #include <cuda.h>
-#include "matmul\SpMat.h"
-#include "matmul\GPUVector.h"
+#include "matmul/SpMat.h"
+#include "matmul/GPUVector.h"
 #include "lsqr_gpu.h"
+#include <cublas_v2.h>
 
 
 // reads vector from file
@@ -42,9 +43,9 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 	
 	double *data = (double*) malloc (sizeof(double) * n);
 	int * rowNnz = (int*) malloc(sizeof(int)*m);
-	*rowPtr = (int*) malloc(sizeof(int)*m) ;
+	*rowPtr = (int*) malloc(sizeof(int)*(m+1)) ;
 	//rowPtr = new int[m];
-	(*rowPtr)[0] = 0;
+	// (*rowPtr)[0] = 0;
 	totalNnz = 0;
 	int rowCounter = 0;
 	if (data == NULL) {fputs ("Memory error",stderr); exit (2);}
@@ -54,8 +55,8 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 			if(std::abs(data[i]) > ZERO)
 				rowNnz[rowCounter]++;
 		totalNnz += rowNnz[rowCounter];
-		(*rowPtr)[rowCounter + 1] = totalNnz;
 		rowCounter++;
+		(*rowPtr)[rowCounter] = totalNnz;
 	}
 	
 	printf("Total Non-Zero Elements: %d\n",totalNnz);	
@@ -81,8 +82,16 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 
 int main(int argc, char *argv[])
 {
-	if(argc < 3)
+	cublasHandle_t handle;
+	cublasStatus_t status = cublasCreate(&handle);
+	if (status != CUBLAS_STATUS_SUCCESS) {
+		printf("Error creating handle\n");
+		exit(-1);
+	}
+	if(argc < 3) {
+		printf("Matrix and vector file required\n");
 		return 0;
+	}
 	char* matrix_file_name = argv[1];
 	char* vector_file_name = argv[2];
 	int* rowPtr = NULL; 
@@ -99,8 +108,8 @@ int main(int argc, char *argv[])
 		printf("Vector dimension (%d) must agree with number of rows (%d) in matrix",vec_dim,m);
 		return 0;
 	}
-	GPUVector b(vec_dim,vec_data);
-	GPUVector x(n);
+	GPUVector b(handle, vec_dim,vec_data);
+	GPUVector x(handle, n);
 	SpMat A(rowPtr, colInd, val, n, m, totalNnz);
 	lsqr(A,b,x);
 	double *x_cpu = new double[n];

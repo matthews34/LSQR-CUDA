@@ -1,6 +1,6 @@
 #include "GPUVector.h"
 #include "utils.h"
-
+#include <cublas_v2.h>
 
 __global__ void norm_kernel(const double *data, const int n, double *output) {
 
@@ -23,20 +23,16 @@ __global__ void norm_kernel(const double *data, const int n, double *output) {
 }
 
 double GPUVector::norm() {
-	double h_result;
-	double *d_result;
+	double result;
 
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
+	cublasStatus_t status;
+	status = cublasDnrm2(handle, n, elements, 1, &result);
+	if (status != CUBLAS_STATUS_SUCCESS) {
+		printf("Error calculating norm\n");
+		exit(-1);
+	}
 
-	cudaMalloc(&d_result, sizeof(double));
-
-	norm_kernel<<<dimGrid, dimBlock>>>(elements, n, d_result);
-
-	cudaMemcpy(&h_result, d_result, sizeof(double), cudaMemcpyDeviceToHost);
-	CUDAFREE(d_result);
-
-	return h_result;
+	return result;
 }
 
 __global__ void scale_kernel(const double *input, double *output, const int n, const double s) {
@@ -49,7 +45,7 @@ GPUVector operator*(const GPUVector v, const double s) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid((v.n + dimBlock.x - 1) / dimBlock.x);
 
-	GPUVector c(v.n);
+	GPUVector c(v.handle, v.n);
 	
 	scale_kernel<<<dimGrid, dimBlock>>>(v.elements, c.elements, v.n, s);
 
@@ -69,7 +65,7 @@ GPUVector GPUVector::operator+(const GPUVector b) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
-	GPUVector c(n);
+	GPUVector c(handle, n);
 	
 	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements, 1);
 
@@ -80,7 +76,7 @@ GPUVector GPUVector::operator-(const GPUVector b) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
-	GPUVector c(n);
+	GPUVector c(handle, n);
 
 	add_kernel<<<dimGrid, dimBlock>>>(elements, b.elements, c.elements, -1);
 

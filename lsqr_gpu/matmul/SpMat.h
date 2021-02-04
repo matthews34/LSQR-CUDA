@@ -23,9 +23,9 @@ public:
 				cudaMemcpy(val,values,sizeof(double)*nnz,cudaMemcpyDefault);
 			}
 	SpMat(int rows,int cols,int nnz) : rows(rows), cols(cols), nnz(nnz) {
-		cudaMalloc(&rowPtr,(rows+1)*sizeof(int));
-		cudaMalloc(&colInd,nnz*sizeof(int));
-		cudaMalloc(&val,nnz*sizeof(double));
+		cudaMallocManaged(&rowPtr,(rows+1)*sizeof(int));
+		cudaMallocManaged(&colInd,nnz*sizeof(int));
+		cudaMallocManaged(&val,nnz*sizeof(double));
 	}
 	void dot(const GPUVector&, GPUVector&);
 	SpMat transpose();

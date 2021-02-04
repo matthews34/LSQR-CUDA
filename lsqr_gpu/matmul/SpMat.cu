@@ -115,7 +115,7 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 }
 									
 GPUVector SpMat::operator*(const GPUVector b) {
-	GPUVector y(rows);
+	GPUVector y(b.handle, rows);
 	printf("b.n = %d\n",b.n);
 	dot(b,y);
 	return y;
