@@ -48,6 +48,7 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 	// (*rowPtr)[0] = 0;
 	totalNnz = 0;
 	int rowCounter = 0;
+	(*rowPtr)[0] = 0;
 	if (data == NULL) {fputs ("Memory error",stderr); exit (2);}
 	while(fread(data,sizeof(double),n,file)) {
 		rowNnz[rowCounter] = 0;
