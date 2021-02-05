@@ -168,6 +168,6 @@ int main(int argc, char *argv[])
     //std::cout << "x =\n" << x << std::endl;
     printf("elapsed time [s]: %f\n",elapsed.count());
     printf("final residual = %f\n",norm(dot(A,x) - b));
-std::cout << dot(A,x) << std::endl;
+std::cout << x << std::endl;
     return 0;
 }

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "GPUVector.h"
+#include <stdio.h>
+#include <cuda.h>
 
 #define BULK_SIZE 5
 
@@ -18,9 +20,9 @@ public:
 				cudaMalloc(&rowPtr, (rows + 1) * sizeof(int));
 				cudaMalloc(&colInd, (nnz) * sizeof(int));
 				cudaMalloc(&val, (nnz) * sizeof(double));
-				cudaMemcpy(rowPtr,rowP,sizeof(double)*(rows+1),cudaMemcpyDefault);
-				cudaMemcpy(colInd,colI,sizeof(double)*nnz,cudaMemcpyDefault);
-				cudaMemcpy(val,values,sizeof(double)*nnz,cudaMemcpyDefault);
+				cudaMemcpy(rowPtr,rowP,sizeof(int)*(rows+1),cudaMemcpyHostToDevice);
+				cudaMemcpy(colInd,colI,sizeof(int)*nnz,cudaMemcpyHostToDevice);
+				cudaMemcpy(val,values,sizeof(double)*nnz,cudaMemcpyHostToDevice);
 			}
 	SpMat(int rows,int cols,int nnz) : rows(rows), cols(cols), nnz(nnz) {
 		cudaMallocManaged(&rowPtr,(rows+1)*sizeof(int));
@@ -30,5 +32,5 @@ public:
 	void dot(const GPUVector&, GPUVector&);
 	SpMat transpose();
 	~SpMat();
-	GPUVector operator*(const GPUVector b);
+	GPUVector operator*(const GPUVector & b);
 };

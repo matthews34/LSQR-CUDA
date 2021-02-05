@@ -37,12 +37,13 @@ double GPUVector::norm() {
 
 __global__ void scale_kernel(const double *input, double *output, const int n, const double s) {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
-
+	if(n - 1 < i)
+		return;
 	output[i] = input[i] * s;
 }
 
 GPUVector operator*(const GPUVector v, const double s) {
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((v.n + dimBlock.x - 1) / dimBlock.x);
 
 	GPUVector c(v.handle, v.n);
@@ -62,7 +63,7 @@ __global__ void add_kernel(const double *a, const double *b, double *c, double f
 }
 
 GPUVector GPUVector::operator+(const GPUVector b) {
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
 	GPUVector c(handle, n);
@@ -73,7 +74,7 @@ GPUVector GPUVector::operator+(const GPUVector b) {
 }
 
 GPUVector GPUVector::operator-(const GPUVector b) {
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(BLOCK_SIZE);
 	dim3 dimGrid((n + dimBlock.x - 1) / dimBlock.x);
 
 	GPUVector c(handle, n);

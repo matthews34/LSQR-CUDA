@@ -5,7 +5,6 @@
 #include <cuda.h>
 #include "matmul/SpMat.h"
 #include "matmul/GPUVector.h"
-#include "lsqr_gpu.h"
 
 
 template<typename Vec>
@@ -90,6 +89,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
         Vec residual_vec;
         residual_vec = dot(A,x) - b;
         residual = norm(residual_vec);
+		printf("iteration %d: residual = %f\n",i,residual);
         if(residual < epsilon) {
             printf("finished after %d iterations\n",i);
             return;

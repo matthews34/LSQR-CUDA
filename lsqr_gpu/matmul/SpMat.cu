@@ -98,15 +98,12 @@ __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double
 	int n = rowPtr[row+1] - rowPtr[row];
 	for(int i = 0; i < n; i++)
 		y[row] += y_nnz[idx+i];
-	printf("y[%d] = %f\n",row,y[row]);
-	
 }
-
+							
 void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 	// create nnz threads
 	assert(x.n == cols);
-	//dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimBlock(3,3);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
 	double *y_nnz;
 	cudaMallocManaged(&y_nnz, nnz*sizeof(double));
@@ -114,9 +111,8 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 	CUDAFREE(y_nnz);
 }
 									
-GPUVector SpMat::operator*(const GPUVector b) {
+GPUVector SpMat::operator*(const GPUVector &b) {
 	GPUVector y(b.handle, rows);
-	printf("b.n = %d\n",b.n);
 	dot(b,y);
 	return y;
 }
@@ -144,7 +140,7 @@ __global__ void transpose_row_nnz(const int * colInd, int cols, int nnz, int* co
 
 __global__ void transpose_kernel(	const int* rowPtr, const int * colInd, const double* val, 
 									int * rowInd, double* trans_val,
-									int row_num, int col_num, int nnz, int* colNnz, int* colPtr) {
+									int row_num, int col_num, int nnz, int* colNnz, const int* colPtr) {
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
 	if(nnz - 1 < idx)
 		return;
@@ -177,13 +173,15 @@ SpMat::SpMat(SpMat &A) : rows(A.cols), cols(A.rows), nnz(A.nnz) {
 SpMat SpMat::transpose() {
 	SpMat A_t(cols,rows,nnz);
 	int *rowNnz;
+	int *A_t_rowPtr;
+	cudaMallocManaged(&A_t_rowPtr,(cols+1)*sizeof(int));
 	cudaMalloc(&rowNnz,rows*sizeof(int));
-	//dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimBlock(3,3);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
-	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t.rowPtr);
-	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t.colInd, A_t.val, rows, cols, nnz, rowNnz, A_t.rowPtr);
+	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
+	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t.colInd, A_t.val, rows, cols, nnz, rowNnz, A_t_rowPtr);
 	CUDAFREE(rowNnz);
+	A_t.rowPtr = A_t_rowPtr;
 	return A_t;
 }
 
