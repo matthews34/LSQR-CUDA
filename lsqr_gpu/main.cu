@@ -108,22 +108,14 @@ int main(int argc, char *argv[])
 		printf("Vector dimension (%d) must agree with number of rows (%d) in matrix",vec_dim,m);
 		return 0;
 	}
-	printf("rowPtr = ");
-	for(int i = 0; i < m+1; ++i)
-		printf(" %d",rowPtr[i]);
-	printf("\n");
-	printf("colInd = ");
-	for(int i = 0; i < totalNnz; ++i)
-		printf(" %d",colInd[i]);
-	printf("\n");
-	printf("val = ");
-	for(int i = 0; i < totalNnz; ++i)
-		printf(" %f",val[i]);
-	printf("\n");
 	GPUVector b(handle, vec_dim,vec_data);
 	GPUVector x(handle, n);
 	SpMat A(rowPtr, colInd, val, n, m, totalNnz);
+    auto start = std::chrono::high_resolution_clock::now();
 	lsqr(A,b,x);
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    printf("elapsed time [s]: %f\n",elapsed.count());
 	double *x_cpu = new double[n];
 	cudaMemcpy(x_cpu, x.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);
 	printf("x = (");

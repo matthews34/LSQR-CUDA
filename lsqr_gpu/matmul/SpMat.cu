@@ -174,14 +174,21 @@ SpMat SpMat::transpose() {
 	SpMat A_t(cols,rows,nnz);
 	int *rowNnz;
 	int *A_t_rowPtr;
-	cudaMallocManaged(&A_t_rowPtr,(cols+1)*sizeof(int));
+	int *A_t_colInd;
+	double *A_t_val;
+	cudaMalloc(&A_t_rowPtr,(cols+1)*sizeof(int));
+	cudaMalloc(&A_t_colInd,nnz*sizeof(int));
+	cudaMalloc(&A_t_val,nnz*sizeof(double));
 	cudaMalloc(&rowNnz,rows*sizeof(int));
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
 	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
-	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t.colInd, A_t.val, rows, cols, nnz, rowNnz, A_t_rowPtr);
+	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t_colInd, A_t_val, rows, cols, nnz, rowNnz, A_t_rowPtr);
 	CUDAFREE(rowNnz);
+	cudaDeviceSynchronize();
 	A_t.rowPtr = A_t_rowPtr;
+	A_t.colInd = A_t_colInd;
+	A_t.val = A_t_val;
 	return A_t;
 }
 
