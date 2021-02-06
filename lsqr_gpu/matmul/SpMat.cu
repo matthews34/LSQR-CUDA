@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "stdio.h"
 
+//method for calculating number of non-zero elements in a row (DEPRICATED)
 __global__ void nnz_in_row(const double* data_partial, const int n, const int cols, int* nnz) {
 	int i = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
 	if(n-1 < i)
@@ -10,6 +11,7 @@ __global__ void nnz_in_row(const double* data_partial, const int n, const int co
 		atomicAdd(nnz, 1);
 }
 
+//method for computing the cummulative sum of non-zero elements along the rows (DEPRICATED)
 __global__ void cum_sum(const int * rowNnz, const int rows, int * cumsum) {
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
 	if(rows < idx)
@@ -28,9 +30,9 @@ __global__ void cum_sum(const int * rowNnz, const int rows, int * cumsum) {
 		cumsum[idx] = cumsum[idx] + rowNnz[idx-1];
 }
 
+//method for extracting column index and according value from each row (DEPRICATED)
 __global__ void get_ind_val(const double* data_partial, const int n, const int cols, int * colInd, double * val, int& nnz) {
 	int i = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
-	//int elem_num = nnz;
 	if(n-1 < i)
 		return;
 	if(!(abs(data_partial[i]) > ZERO))
@@ -42,6 +44,8 @@ __global__ void get_ind_val(const double* data_partial, const int n, const int c
 	
 }
 
+// This constructor is DEPRICATED
+// it basically loads the data batchwise to the GPU and computes the CSR representation of the Matrix
 SpMat::SpMat(int rows, int cols, double * data) : rows(rows), cols(cols) {
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(dimBlock.x*dimBlock.y / (cols*BULK_SIZE) + 1);
@@ -82,45 +86,54 @@ SpMat::SpMat(int rows, int cols, double * data) : rows(rows), cols(cols) {
 	CUDAFREE(data_partial);
 }
 
+//kernel for calculating the dot product between x and A and storing the results in y
 __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double* val, 
 							const double* x, double* y, int row_num, int col_num, double * y_nnz){
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
-	if(rowPtr[row_num] - 1 < idx)
+	if(rowPtr[row_num-1] - 1 < idx)
 		return;
+	// each thread has to determine its row number
 	int row;
 	for (int i = 0; i < row_num; i++)
 		if((idx >= rowPtr[i] && idx < rowPtr[i+1]) && rowPtr[i] != rowPtr[i+1]) {
 			row = i;
 		}
+	// each thread has to calculate its value
 	y_nnz[idx] = x[colInd[idx]]*val[idx];
 	if(idx != rowPtr[row])
 		return;
+	//first thread of a row sums all entrys in the row and stores result in the according entry in y
 	int n = rowPtr[row+1] - rowPtr[row];
 	for(int i = 0; i < n; i++)
 		y[row] += y_nnz[idx+i];
 }
-							
+
+// method for calling dot_kernel with nnz threads
 void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 	// create nnz threads
 	assert(x.n == cols);
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	//dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 dimBlock(3, 3);
 	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
 	double *y_nnz;
 	cudaMallocManaged(&y_nnz, nnz*sizeof(double));
 	dot_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, x.elements, y.elements, rows, cols, y_nnz);
 	CUDAFREE(y_nnz);
 }
-									
+
+// star operator for calling the dot product
 GPUVector SpMat::operator*(const GPUVector &b) {
 	GPUVector y(b.handle, rows);
 	dot(b,y);
 	return y;
 }
 
+// kernel for calculating the number of nnz elements in each column of matrix A
 __global__ void transpose_row_nnz(const int * colInd, int cols, int nnz, int* colNnz, int* cumsum) {
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
 	if(nnz - 1 < idx)
 		return;
+	// increment number of ellements in your column
 	atomicAdd(colNnz + colInd[idx],1);
 	if(cols < idx)
 		return;
@@ -128,6 +141,7 @@ __global__ void transpose_row_nnz(const int * colInd, int cols, int nnz, int* co
 		cumsum[0] = 0;
 	else
 		cumsum[idx+1] = colNnz[idx];
+	// use predicate sum approach from lecture to compute cummulative sum
 	for(int stride = 1; stride < cols; stride*=2) {
 		__syncthreads();
 		if(stride < idx)
@@ -138,12 +152,14 @@ __global__ void transpose_row_nnz(const int * colInd, int cols, int nnz, int* co
 		cumsum[idx] = cumsum[idx] + colNnz[idx-1];
 }
 
+// kernel for transposing the entries in matrix A
 __global__ void transpose_kernel(	const int* rowPtr, const int * colInd, const double* val, 
 									int * rowInd, double* trans_val,
 									int row_num, int col_num, int nnz, int* colNnz, const int* colPtr) {
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
 	if(nnz - 1 < idx)
 		return;
+	// each thread has to find its row
 	int row;
 	for (int i = 0; i < row_num; i++)
 		if((idx >= rowPtr[i] && idx < rowPtr[i+1]) && rowPtr[i] != rowPtr[i+1]) {
@@ -154,24 +170,8 @@ __global__ void transpose_kernel(	const int* rowPtr, const int * colInd, const d
 	trans_val[colPtr[colInd[idx]] + my_ind] = val[idx];
 }
 
-
-/*
-SpMat::SpMat(SpMat &A) : rows(A.cols), cols(A.rows), nnz(A.nnz) {
-	cudaMalloc(&rowPtr,(rows+1)*sizeof(int));
-	cudaMalloc(&colInd,nnz*sizeof(int));
-	cudaMalloc(&val,nnz*sizeof(double));
-	int *rowNnz;
-	cudaMalloc(&rowNnz,rows*sizeof(int));
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimGrid(dimBlock.x*dimBlock.y/nnz + 1);
-	transpose_row_nnz<<<dimGrid, dimBlock>>>(A.colInd, A.cols, nnz, rowNnz, rowPtr);
-	transpose_kernel<<<dimGrid, dimBlock>>>(A.rowPtr, A.colInd, A.val, colInd, val, A.rows, A.cols, A.nnz, rowNnz, rowPtr);
-	CUDAFREE(rowNnz);
-}
-*/
-
+// calls transpose kernels with nnz threads
 SpMat SpMat::transpose() {
-	SpMat A_t(cols,rows,nnz);
 	int *rowNnz;
 	int *A_t_rowPtr;
 	int *A_t_colInd;
@@ -185,10 +185,7 @@ SpMat SpMat::transpose() {
 	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
 	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t_colInd, A_t_val, rows, cols, nnz, rowNnz, A_t_rowPtr);
 	CUDAFREE(rowNnz);
-	cudaDeviceSynchronize();
-	A_t.rowPtr = A_t_rowPtr;
-	A_t.colInd = A_t_colInd;
-	A_t.val = A_t_val;
+	SpMat A_t(A_t_rowPtr,A_t_colInd,A_t_val,cols,rows,nnz);
 	return A_t;
 }
 

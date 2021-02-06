@@ -6,6 +6,7 @@
 
 #define BULK_SIZE 5
 
+// header with data for SpMat
 class SpMat {
 public:
 	int rows, cols, nnz;
@@ -13,6 +14,7 @@ public:
 	int *colInd;
 	double* val;
 	SpMat(int, int, double*);
+	// constructor for precalculated values;
 	SpMat(	int* rowP, int* colI, double* values, 
 			int rows, int cols, int nnz) : 
 			rows(rows), cols(cols), nnz(nnz) {

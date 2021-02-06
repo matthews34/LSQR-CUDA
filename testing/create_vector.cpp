@@ -17,6 +17,9 @@ int main(int argc, char** argv) {
 	if(argc > 2) {
 		sparsity = std::stod( argv[2] );
 	}
+	bool random = true;
+	if(argc > 3)
+		random = false;
 		
 	std::srand(std::time(nullptr));
 	double data;
@@ -27,13 +30,21 @@ int main(int argc, char** argv) {
 	int count = 0;
 	bool is_data;
 	// roll 6-sided dice 20 times
-    for (int i = 0; i < n; i++) {
-		is_data =  std::rand() > RAND_MAX * sparsity;
-		if(is_data)
-			count++;
-		data =  is_data ? LO + static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(HI-LO))) : 0;
-		fwrite(&data, sizeof(double), 1, file);
-    }
+	if (random) {
+		for (int i = 0; i < n; i++) {
+			is_data =  std::rand() > RAND_MAX * sparsity;
+			if(is_data)
+				count++;
+			data =  is_data ? LO + static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(HI-LO))) : 0;
+			fwrite(&data, sizeof(double), 1, file);
+		}
+	} else {
+		for (int i = 0; i < n; i++) {
+			data = count++;
+			fwrite(&data, sizeof(double), 1, file);
+		}
+	
+	}
 	fclose(file);
 	printf("Counted %d of %d values\n",count,n);
 }

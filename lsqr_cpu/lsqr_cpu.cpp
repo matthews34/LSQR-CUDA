@@ -69,7 +69,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
         x = x + scale(w, phi / rho );
         w = v - scale(w, theta / rho);
         residual = norm(dot(A,x) - b);
-		printf("iteration %d: residual=%f\n",i,residual);
+	//	printf("iteration %d: residual=%f\n",i,residual);
         if(residual < epsilon) {
             printf("finished after %d iterations\n",i);
             return;
@@ -134,6 +134,7 @@ Eigen::SparseMatrix<double> read_sparse_matrix(char* file_name, int& n, int& m) 
 	return mat;
 }
 
+// expected input: mxn matrix binary file named "matrix_m_n", m vector binary file named "vector_m"
 int main(int argc, char *argv[])
 {	
 	if(argc < 3)
@@ -166,6 +167,6 @@ int main(int argc, char *argv[])
     //std::cout << "x =\n" << x << std::endl;
     printf("elapsed time [s]: %f\n",elapsed.count());
     printf("final residual = %f\n",norm(dot(A,x) - b));
-std::cout << x << std::endl;
+//std::cout << x << std::endl;
     return 0;
 }

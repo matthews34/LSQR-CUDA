@@ -81,6 +81,8 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 	FREE(rowNnz);
 }
 
+
+// expected input: mxn matrix binary file named "matrix_m_n", m vector binary file named "vector_m"
 int main(int argc, char *argv[])
 {
 	cublasHandle_t handle;
@@ -101,9 +103,11 @@ int main(int argc, char *argv[])
 	int n; 
 	int m;
 	int totalNnz;
+	// reads matrix in csr format from file
 	read_sparse_matrix(matrix_file_name, &rowPtr, &colInd, &val, n, m, totalNnz);
 	double *vec_data = NULL;
 	int vec_dim;
+	// reads vector from file
 	read_vector(vector_file_name, &vec_data, vec_dim);
 	if(vec_dim != m) {
 		printf("Vector dimension (%d) must agree with number of rows (%d) in matrix",vec_dim,m);
@@ -119,10 +123,10 @@ int main(int argc, char *argv[])
     printf("elapsed time [s]: %f\n",elapsed.count());
 	double *x_cpu = new double[n];
 	cudaMemcpy(x_cpu, x.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);
-	printf("x = (");
+	/*printf("x = (");
 	for(int i = 0; i < m; i++)
 		printf("%f ",x_cpu[i]);
-	printf(")\n");
+	printf(")\n");*/
 	FREE(x_cpu);	
 	FREE(rowPtr);
 	FREE(colInd);
