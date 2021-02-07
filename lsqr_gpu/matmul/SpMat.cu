@@ -92,7 +92,7 @@ __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
 	if(rowPtr[row_num] - 1 < idx)
 		return;
-	// each thread has to determine its row number
+	// each thread has to determine its row number (which was a bad idea)
 	int row;
 	for (int i = 0; i < row_num; i++)
 		if((idx >= rowPtr[i] && idx < rowPtr[i+1]) && rowPtr[i] != rowPtr[i+1]) {
@@ -107,27 +107,14 @@ __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double
 	for(int i = 0; i < n; i++)
 		y[row] += y_nnz[idx+i];
 }
-/*
-// method for calling dot_kernel with nnz threads
+
+// method that calculates dot product between this matrix and GPUVector x and stores results to GPUVector y
 void SpMat::dot(const GPUVector & x,GPUVector & y ) {
-	// create nnz threads
-	assert(x.n == cols);
-	//dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimBlock(3, 3);
-	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
-	double *y_nnz;
-	cudaMallocManaged(&y_nnz, nnz*sizeof(double));
-	dot_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, x.elements, y.elements, rows, cols, y_nnz);
-	CUDAFREE(y_nnz);
-}
-*/
-	
-void SpMat::dot(const GPUVector & x,GPUVector & y ) {
-	// create nnz threads
 	assert(x.n == cols);
 	size_t buffer_size;
 	double h_one = 1.0;
     const double h_zero = 0.0;
+	// calculate buffer size
 	cusparseStat = cusparseCsrmvEx_bufferSize(cusparseH,
 					 CUSPARSE_ALG_MERGE_PATH,
                      CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -145,6 +132,7 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 					 CUDA_R_64F,
 					 &buffer_size);
 	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
+	// allocate buffer for calculation
 	void* buffer;
 	cudaMalloc ((void**)&buffer, buffer_size);
 	cusparseStat = cusparseCsrmvEx(cusparseH,
@@ -162,9 +150,9 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
                      &h_zero, CUDA_R_64F,
                      y.elements, CUDA_R_64F,
 					 CUDA_R_64F,
-			         buffer
-					);
+			         buffer);
 	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
+	CUDAFREE(buffer);
 }
 
 // star operator for calling the dot product
@@ -216,27 +204,7 @@ __global__ void transpose_kernel(	const int* rowPtr, const int * colInd, const d
 	trans_val[colPtr[colInd[idx]] + my_ind] = val[idx];
 }
 
-// calls transpose kernels with nnz threads
-// SpMat SpMat::transpose() {
-// 	int *rowNnz;
-// 	int *A_t_rowPtr;
-// 	int *A_t_colInd;
-// 	double *A_t_val;
-// 	cudaMalloc(&A_t_rowPtr,(cols+1)*sizeof(int));
-// 	cudaMalloc(&A_t_colInd,nnz*sizeof(int));
-// 	cudaMalloc(&A_t_val,nnz*sizeof(double));
-// 	cudaMalloc(&rowNnz,rows*sizeof(int));
-// 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-// 	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
-// 	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
-// 	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t_colInd, A_t_val, rows, cols, nnz, rowNnz, A_t_rowPtr);
-// 	CUDAFREE(rowNnz);
-// 	SpMat A_t(A_t_rowPtr,A_t_colInd,A_t_val,cols,rows,nnz,cusparseH);
-// 	return A_t;
-// }
-
 SpMat SpMat::transpose() {
-
 	size_t buffer_size = 0;
 	// preallocate all required pointers
 	int* cscColPtr = NULL;
@@ -284,10 +252,11 @@ SpMat SpMat::transpose() {
 	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
 	//create new matrix with the pointers and return it
 	SpMat mat(cscColPtr,cscRowInd,cscVal, cols, rows, nnz, cusparseH);
+	CUDAFREE(buffer);
 	return mat;
 }
 	
-
+// destructor for constructed arrays
 SpMat::~SpMat() {
 	CUDAFREE(rowPtr);
 	CUDAFREE(colInd);

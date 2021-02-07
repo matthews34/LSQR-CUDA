@@ -23,7 +23,7 @@ public:
 	SpMat(	int* rowP, int* colI, double* values, 
 			int rows, int cols, int nnz, cusparseHandle_t cusparseH) : 
 			rows(rows), cols(cols), nnz(nnz), cusparseH(cusparseH) {
-				// printf("Initializing Matrix\n");
+				// initialize and copy the arrays for the matrix
 				cudaMalloc(&rowPtr, (rows + 1) * sizeof(int));
 				cudaMalloc(&colInd, (nnz) * sizeof(int));
 				cudaMalloc(&val, (nnz) * sizeof(double));

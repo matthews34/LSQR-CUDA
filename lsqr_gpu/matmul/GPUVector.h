@@ -3,16 +3,18 @@
 #include "utils.h"
 #include <cublas.h>
 
+// constructor for GPUVectors 
 struct GPUVector {
 	int n;
 	double *elements;
 	cublasHandle_t handle;
 	GPUVector() {}
+	// set vectors with data
 	GPUVector(cublasHandle_t handle, int N, double *data) : n(N), handle(handle) {
-		// printf("Initializing Vector\n");
 		cudaMallocManaged(&elements, sizeof(double)*N);
 		cudaMemcpy(elements, data, sizeof(double)*N, cudaMemcpyDefault);
 	}
+	// set vectors with zeros
 	GPUVector(cublasHandle_t handle, int N) : n(N), handle(handle) {
 		cudaMallocManaged(&elements, sizeof(double)*N);
 		cudaMemset(elements,0,sizeof(double)*N);

@@ -3,7 +3,6 @@
 #include <iostream>
 #include <math.h>
 #include <chrono>
-//#include <cusparse_v2.h>
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include "matmul/SpMat.h"
@@ -12,6 +11,7 @@
 #include <cublas_v2.h>
 #include <cusparse.h>
 
+// method for computing the norm of a vector
 double norm(GPUVector &v) {
     double norm = v.norm();
 	return norm;
@@ -20,13 +20,11 @@ double norm(GPUVector &v) {
 void read_vector(char* file_name, double** data, int &n) {
 	FILE *file = fopen(file_name, "rb");
 	if (file==NULL) {fputs ("File error\n",stderr); exit (1);}
-	
+	// get array dimensions from the file name
 	char *token = strtok(file_name, "_");
 	token = strtok(NULL, "_");
 	n = std::stoi( token );
-	
-	// printf("Vector size: %d\n",n);
-	
+	// read all data from file and load it to the vector memory
 	*data = (double*) malloc (sizeof(double) * n);
 	if (*data == NULL) {fputs ("Memory error",stderr); exit (2);}
 	fread(*data,sizeof(double),n,file);
@@ -35,28 +33,23 @@ void read_vector(char* file_name, double** data, int &n) {
 
 // reads matrix from file and parses it to csr format
 void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** val, int& n, int& m, int& totalNnz) {
-	// printf("file_name = %s\n",file_name);
-	
 	FILE *file = fopen(file_name, "rb");
-	if (file==NULL) {fputs ("File error\n",stderr); exit (1);}
-	
+	if (file==NULL) {fputs ("File error\n",stderr); exit (1);}	
+	// read matrix dimensions from file name
 	char *token = strtok(file_name, "_");
 	token = strtok(NULL, "_");
 	m = std::stoi( token );
 	token = strtok(NULL, "_");
 	n = std::stoi( token );
-	
-	// printf("Matrix size: %dx%d\n",m,n);
-	
+	// create arrays for 
 	double *data = (double*) malloc (sizeof(double) * n);
 	int * rowNnz = (int*) malloc(sizeof(int)*m);
-	*rowPtr = (int*) malloc(sizeof(int)*(m+1)) ;
-	//rowPtr = new int[m];
-	// (*rowPtr)[0] = 0;
+	*rowPtr = (int*) malloc(sizeof(int)*(m+1));
 	totalNnz = 0;
 	int rowCounter = 0;
 	(*rowPtr)[0] = 0;
 	if (data == NULL) {fputs ("Memory error",stderr); exit (2);}
+	// read each line of the file and count the nnz elements per row
 	while(fread(data,sizeof(double),n,file)) {
 		rowNnz[rowCounter] = 0;
 		for(int i = 0; i < n; i++)
@@ -66,14 +59,11 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 		rowCounter++;
 		(*rowPtr)[rowCounter] = totalNnz;
 	}
-	
-	// printf("Total Non-Zero Elements: %d\n",totalNnz);	
+	// re-read the file and fill values with according column indexes
 	rewind(file);
-
 	*val = (double*) malloc(sizeof(double)*totalNnz);
 	*colInd = (int*) malloc(sizeof(int)*totalNnz);
 	int counter = 0;
-	
 	while(fread(data,sizeof(double),n,file)) {
 		for(int i = 0; i < n; i++) 
 			if(std::abs(data[i]) > ZERO){
@@ -83,11 +73,9 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 			}
 	}
 	fclose(file);
-	// printf("Read Data\n");
 	FREE(data);
 	FREE(rowNnz);
 }
-
 
 // expected input: mxn matrix binary file named "matrix_m_n", m vector binary file named "vector_m"
 int main(int argc, char *argv[])
@@ -128,7 +116,6 @@ int main(int argc, char *argv[])
 	SpMat A(rowPtr, colInd, val, m, n, totalNnz, cusparseH);
 
 	printf("Starting Calculation (n = %d,m = %d)\n",n,m);
-    // printf("initial residual = %f\n",norm(b));
 	// Start GPU timing
     cudaEvent_t evStart, evStop;
 	cudaEventCreate(&evStart);
@@ -145,6 +132,7 @@ int main(int argc, char *argv[])
 	cudaEventDestroy(evStart);
 	cudaEventDestroy(evStop);
 	
+	// get resulting vector
 	double *x_cpu = new double[n];
 	cudaMemcpy(x_cpu, x.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);
 
@@ -152,6 +140,7 @@ int main(int argc, char *argv[])
 	GPUVector residual_vec = dot(A,x) - b;
     printf("final residual = %f\n",norm(residual_vec));
 	
+	// print vector
 	printf("x = (");
 	for(int i = 0; i < n; i++)
 		printf("%f ",x_cpu[i]);

@@ -6,41 +6,47 @@
 #include "matmul/SpMat.h"
 #include "matmul/GPUVector.h"
 
-
+// template method for getting norm of a vector
 template<typename Vec>
 double norm(Vec &v) {
     double norm = v.norm();
 	return norm;
 }
 
+// template method for getting transposed matrix
 template<typename Mat>
 Mat transpose(Mat &m) {
     return m.transpose();
 }
 
+// template method for getting norm of a vector
 template<typename Mat, typename Vec>
 Vec dot(Mat &A, Vec& b) {
     Vec y = A*b;
 	return y;
 }
 
+// template method for scaling a vector with a scalar
 template<typename Vec>
 Vec scale(Vec& v, double s) {
     Vec y = v*s;
 	return y;
 }
 
+// template method for getting the size of a vector
 template<typename Vec>
 int size(Vec& x) {
     return x.size();
 }
 
+// template method for adding two vectors together
 template<typename Vec>
 Vec add(Vec& a, Vec& b) {
 	Vec c = a + b;
 	return c;
 }
 
+// template method for subtracting two vectors together
 template<typename Vec>
 Vec sub(Vec& a, Vec& b) {
 	Vec c = a - b;
@@ -50,7 +56,6 @@ Vec sub(Vec& a, Vec& b) {
 //lsqr algorithm using template vectors and matricies
 template<typename Mat, typename Vec>
 void lsqr(Mat& A, Vec& b, Vec& x) {
-	// printf("Starting lsqr()\n");
 	Vec residual_vec;
     residual_vec = dot(A,x) - b;
     double residual = norm(residual_vec);
@@ -93,13 +98,11 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
         residual = 0;
         Vec residual_vec = dot(A,x) - b;
         residual = norm(residual_vec);
-	//	printf("iteration %d: residual = %f\n",i,residual);
+		// Check if residual small enough
         if(residual < epsilon) {
             printf("finished after %d iterations\n",i);
-			// printf("residual is %f\n",residual);
             return;
         }
     }
     printf("it_max exceeded\n");
-    // printf("residual is %f\n",residual);
 }
