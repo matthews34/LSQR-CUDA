@@ -25,7 +25,7 @@ class Comparison():
         self.n = cpu_result.n
         self.m = cpu_result.m
         self.time_diff = float(cpu_result.elapsed_time) - float(gpu_result.elapsed_time)
-        self.x_diff = cpu_result.x - gpu_result.x
+        self.x_error = abs(cpu_result.x - gpu_result.x)
 
 
 def read_result(file_path: str) -> Result:
@@ -110,7 +110,58 @@ def read_all_results(folder_path: str):
         
 if __name__ == "__main__":
     read_all_results("results")
-    time_diff_list = [c.time_diff for c in Comparison.comparison_list]
+    cpu_times = [c.cpu_result.elapsed_time for c in Comparison.comparison_list]
+    gpu_times = [c.gpu_result.elapsed_time for c in Comparison.comparison_list]
+    time_diff = [c.time_diff for c in Comparison.comparison_list]
     size_list = [int(c.m) * int(c.n) for c in Comparison.comparison_list]
-    plt.scatter(size_list, time_diff_list)
-    plt.savefig("test.png")
+    average_error_list = [np.average(c.x_error) for c in Comparison.comparison_list]
+    std_error_list = [np.std(c.x_error) for c in Comparison.comparison_list]
+
+    # time_diff
+    plt.scatter(size_list, time_diff)
+    plt.title("Time difference between CPU and GPU implementations")
+    plt.xlabel("Matrix size (m x n)")
+    plt.xlim([0, None])
+    plt.ylabel("Time (s)")
+    plt.grid(True)
+    plt.savefig("time_diff.png")
+    plt.clf()
+
+    # cpu times
+    plt.scatter(size_list, cpu_times)
+    plt.title("CPU runtime")
+    plt.xlabel("Matrix size (m x n)")
+    plt.xlim([0, None])
+    plt.ylabel("Time (s)")
+    plt.grid(True)
+    plt.savefig("cpu_time.png")
+    plt.clf()
+
+    # gpu times
+    plt.scatter(size_list, gpu_times)
+    plt.title("GPU runtime")
+    plt.xlabel("Matrix size (m x n)")
+    plt.xlim([0, None])
+    plt.ylabel("Time (s)")
+    plt.grid(True)
+    plt.savefig("gpu_time.png")
+    plt.clf()
+
+    # average error
+    plt.scatter(size_list, average_error_list)
+    plt.title("Average difference")
+    plt.xlabel("Matrix size (m x n)")
+    plt.xlim([0, None])
+    plt.grid(True)
+    plt.savefig("avg_error.png")
+    plt.clf()
+    
+    # error standard deviation 
+    plt.scatter(size_list, std_error_list)
+    plt.title("Standard deviation of errors")
+    plt.xlabel("Matrix size (m x n)")
+    plt.ylabel("Standard deviation")
+    plt.xlim([0, None])
+    plt.grid(True)
+    plt.savefig("std_error.png")
+    plt.clf()
