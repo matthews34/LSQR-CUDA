@@ -9,7 +9,7 @@ struct GPUVector {
 	cublasHandle_t handle;
 	GPUVector() {}
 	GPUVector(cublasHandle_t handle, int N, double *data) : n(N), handle(handle) {
-		printf("Initializing Vector\n");
+		// printf("Initializing Vector\n");
 		cudaMallocManaged(&elements, sizeof(double)*N);
 		cudaMemcpy(elements, data, sizeof(double)*N, cudaMemcpyDefault);
 	}

@@ -1,24 +1,30 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
 #include <math.h>
 #include <chrono>
 //#include <cusparse_v2.h>
+#include <cuda_runtime.h>
 #include <cuda.h>
 #include "matmul/SpMat.h"
 #include "matmul/GPUVector.h"
 #include "lsqr_gpu.h"
 #include <cublas_v2.h>
 
-
+double norm(GPUVector &v) {
+    double norm = v.norm();
+	return norm;
+}
 // reads vector from file
 void read_vector(char* file_name, double** data, int &n) {
 	FILE *file = fopen(file_name, "rb");
-	if (file==NULL) {fputs ("File error",stderr); exit (1);}
+	if (file==NULL) {fputs ("File error\n",stderr); exit (1);}
 	
 	char *token = strtok(file_name, "_");
 	token = strtok(NULL, "_");
 	n = std::stoi( token );
 	
-	printf("Vector size: %d\n",n);
+	// printf("Vector size: %d\n",n);
 	
 	*data = (double*) malloc (sizeof(double) * n);
 	if (*data == NULL) {fputs ("Memory error",stderr); exit (2);}
@@ -28,10 +34,10 @@ void read_vector(char* file_name, double** data, int &n) {
 
 // reads matrix from file and parses it to csr format
 void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** val, int& n, int& m, int& totalNnz) {
-	printf("file_name = %s\n",file_name);
+	// printf("file_name = %s\n",file_name);
 	
 	FILE *file = fopen(file_name, "rb");
-	if (file==NULL) {fputs ("File error",stderr); exit (1);}
+	if (file==NULL) {fputs ("File error\n",stderr); exit (1);}
 	
 	char *token = strtok(file_name, "_");
 	token = strtok(NULL, "_");
@@ -39,7 +45,7 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 	token = strtok(NULL, "_");
 	n = std::stoi( token );
 	
-	printf("Matrix size: %dx%d\n",m,n);
+	// printf("Matrix size: %dx%d\n",m,n);
 	
 	double *data = (double*) malloc (sizeof(double) * n);
 	int * rowNnz = (int*) malloc(sizeof(int)*m);
@@ -60,7 +66,7 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 		(*rowPtr)[rowCounter] = totalNnz;
 	}
 	
-	printf("Total Non-Zero Elements: %d\n",totalNnz);	
+	// printf("Total Non-Zero Elements: %d\n",totalNnz);	
 	rewind(file);
 
 	*val = (double*) malloc(sizeof(double)*totalNnz);
@@ -76,7 +82,7 @@ void read_sparse_matrix(char* file_name, int** rowPtr, int** colInd, double** va
 			}
 	}
 	fclose(file);
-	printf("Read Data\n");
+	// printf("Read Data\n");
 	FREE(data);
 	FREE(rowNnz);
 }
@@ -115,18 +121,38 @@ int main(int argc, char *argv[])
 	}
 	GPUVector b(handle, vec_dim,vec_data);
 	GPUVector x(handle, n);
-	SpMat A(rowPtr, colInd, val, n, m, totalNnz);
-    auto start = std::chrono::high_resolution_clock::now();
+	SpMat A(rowPtr, colInd, val, m, n, totalNnz);
+
+	printf("Starting Calculation (n = %d,m = %d)\n",n,m);
+    printf("initial residual = %f\n",norm(b));
+	// Start GPU timing
+    cudaEvent_t evStart, evStop;
+	cudaEventCreate(&evStart);
+	cudaEventCreate(&evStop);
+	cudaEventRecord(evStart, 0);
+
 	lsqr(A,b,x);
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    printf("elapsed time [s]: %f\n",elapsed.count());
+
+	// Stop GPU timing
+	cudaEventRecord(evStop, 0);
+	cudaEventSynchronize(evStop);
+	float elapsedTime_ms;
+	cudaEventElapsedTime(&elapsedTime_ms, evStart, evStop);
+	cudaEventDestroy(evStart);
+	cudaEventDestroy(evStop);
+	
 	double *x_cpu = new double[n];
 	cudaMemcpy(x_cpu, x.elements, sizeof(double) * n, cudaMemcpyDeviceToHost);
-	/*printf("x = (");
-	for(int i = 0; i < m; i++)
+
+	printf("elapsed time [s]: %f\n",elapsedTime_ms/1000);
+	GPUVector residual_vec = dot(A,x) - b;
+    printf("final residual = %f\n",norm(residual_vec));
+	
+	printf("x = (");
+	for(int i = 0; i < n; i++)
 		printf("%f ",x_cpu[i]);
-	printf(")\n");*/
+	printf(")\n");
+
 	FREE(x_cpu);	
 	FREE(rowPtr);
 	FREE(colInd);

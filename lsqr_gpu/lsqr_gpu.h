@@ -50,7 +50,7 @@ Vec sub(Vec& a, Vec& b) {
 //lsqr algorithm using template vectors and matricies
 template<typename Mat, typename Vec>
 void lsqr(Mat& A, Vec& b, Vec& x) {
-	printf("Starting lsqr()\n");
+	// printf("Starting lsqr()\n");
     // (1) Initialization
     double beta = norm(b);
     Vec u;
@@ -87,8 +87,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
         x = x + scale(w, phi / rho );
         w = v - scale(w, theta / rho);
         residual = 0;
-        Vec residual_vec;
-        residual_vec = dot(A,x) - b;
+        Vec residual_vec = dot(A,x) - b;
         residual = norm(residual_vec);
 	//	printf("iteration %d: residual = %f\n",i,residual);
         if(residual < epsilon) {
@@ -97,6 +96,6 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
             return;
         }
     }
-    printf("it_max exeeded\n");
-    printf("residual is %f\n",residual);
+    printf("it_max exceeded\n");
+    // printf("residual is %f\n",residual);
 }
