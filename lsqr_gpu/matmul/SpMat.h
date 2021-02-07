@@ -23,7 +23,7 @@ public:
 	SpMat(	int* rowP, int* colI, double* values, 
 			int rows, int cols, int nnz, cusparseHandle_t cusparseH) : 
 			rows(rows), cols(cols), nnz(nnz), cusparseH(cusparseH) {
-				printf("Initializing Matrix\n");
+				// printf("Initializing Matrix\n");
 				cudaMalloc(&rowPtr, (rows + 1) * sizeof(int));
 				cudaMalloc(&colInd, (nnz) * sizeof(int));
 				cudaMalloc(&val, (nnz) * sizeof(double));
@@ -34,9 +34,9 @@ public:
 				assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
 			}
 	SpMat(int rows,int cols,int nnz) : rows(rows), cols(cols), nnz(nnz) {
-		cudaMallocManaged(&rowPtr,(rows+1)*sizeof(int));
-		cudaMallocManaged(&colInd,nnz*sizeof(int));
-		cudaMallocManaged(&val,nnz*sizeof(double));
+		cudaMalloc(&rowPtr,(rows+1)*sizeof(int));
+		cudaMalloc(&colInd,nnz*sizeof(int));
+		cudaMalloc(&val,nnz*sizeof(double));
 	}
 	void dot(const GPUVector&, GPUVector&);
 	SpMat transpose();

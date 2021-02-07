@@ -75,7 +75,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
             return;
         }
     }
-    printf("it_max exeeded\n");
+    printf("it_max exceeded\n");
 }
 
 
@@ -89,7 +89,6 @@ Eigen::VectorXd read_vector(char* file_name, int &n) {
 	n = std::stoi( token );
 	
 	Eigen::VectorXd vec(n);
-	printf("Vector size: %d\n",n);
 	
 	fread(vec.data(),sizeof(double),n,file);
 	fclose(file);
@@ -99,8 +98,8 @@ Eigen::VectorXd read_vector(char* file_name, int &n) {
 
 // reads matrix from file and parses it to csr format
 Eigen::SparseMatrix<double> read_sparse_matrix(char* file_name, int& n, int& m) {
-	printf("file_name = %s\n",file_name);
-	
+	// printf("file_name = %s\n",file_name);
+
 	FILE *file = fopen(file_name, "rb");
 	if (file==NULL) {fputs ("File error",stderr); exit (1);}
 	
@@ -110,10 +109,9 @@ Eigen::SparseMatrix<double> read_sparse_matrix(char* file_name, int& n, int& m) 
 	token = strtok(NULL, "_");
 	n = std::stoi( token );
 	
-	printf("Matrix size: %dx%d\n",m,n);
 	
 	Eigen::SparseMatrix<double> mat(m,n);
-	mat.reserve(Eigen::VectorXi::Constant(m,n/10));
+	mat.reserve(Eigen::VectorXi::Constant(n,m/10));
 	
 	double *data = (double*) malloc (sizeof(double) * n);
 	
@@ -129,7 +127,6 @@ Eigen::SparseMatrix<double> read_sparse_matrix(char* file_name, int& n, int& m) 
 	mat.makeCompressed();
 	
 	fclose(file);
-	printf("Read Data\n");
 	if(data) free(data);
 	return mat;
 }
@@ -167,6 +164,11 @@ int main(int argc, char *argv[])
     //std::cout << "x =\n" << x << std::endl;
     printf("elapsed time [s]: %f\n",elapsed.count());
     printf("final residual = %f\n",norm(dot(A,x) - b));
-//std::cout << x << std::endl;
+
+    printf("x = (");
+	for(int i = 0; i < n; i++)
+		printf("%f ",x(i));
+	printf(")\n");
+    
     return 0;
 }
