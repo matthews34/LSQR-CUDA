@@ -86,7 +86,7 @@ SpMat::SpMat(int rows, int cols, double * data) : rows(rows), cols(cols) {
 	CUDAFREE(data_partial);
 }
 
-//kernel for calculating the dot product between x and A and storing the results in y
+//kernel for calculating the dot product between x and A and storing the results in y (DEPRICATED)
 __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double* val, 
 							const double* x, double* y, int row_num, int col_num, double * y_nnz){
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
@@ -107,7 +107,7 @@ __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double
 	for(int i = 0; i < n; i++)
 		y[row] += y_nnz[idx+i];
 }
-
+/*
 // method for calling dot_kernel with nnz threads
 void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 	// create nnz threads
@@ -119,6 +119,51 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 	cudaMallocManaged(&y_nnz, nnz*sizeof(double));
 	dot_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, x.elements, y.elements, rows, cols, y_nnz);
 	CUDAFREE(y_nnz);
+}
+*/
+	
+void SpMat::dot(const GPUVector & x,GPUVector & y ) {
+	// create nnz threads
+	assert(x.n == cols);
+	size_t buffer_size = 0;
+	double h_one = 1.0;
+    const double h_zero = 0.0;
+	cusparseCsrmvEx_bufferSize(cusparseH,
+ 					 CUSPARSE_ALG0,
+                     CUSPARSE_OPERATION_NON_TRANSPOSE,
+                     rows,
+                     cols,
+                     nnz,
+                     &h_one, CUDA_R_64F,
+                     descrA,
+                     val, CUDA_R_64F,
+                     rowPtr,
+                     colInd,
+                     x.elements, CUDA_R_64F,
+                     &h_zero, CUDA_R_64F,
+                     y.elements, CUDA_R_64F,
+					 CUDA_R_64F,
+					 &buffer_size);
+	void* buffer = NULL;
+	cudaMalloc ((void**)&buffer, buffer_size);
+	cusparseStat = cusparseCsrmvEx(cusparseH,
+					 CUSPARSE_ALG0,
+                     CUSPARSE_OPERATION_NON_TRANSPOSE,
+                     rows,
+                     cols,
+                     nnz,
+                     &h_one, CUDA_R_64F,
+                     descrA,
+                     val, CUDA_R_64F,
+                     rowPtr,
+                     colInd,
+                     x.elements, CUDA_R_64F,
+                     &h_zero, CUDA_R_64F,
+                     y.elements, CUDA_R_64F,
+					 CUDA_R_64F,
+			         buffer
+					);
+	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
 }
 
 // star operator for calling the dot product
@@ -185,7 +230,7 @@ SpMat SpMat::transpose() {
 	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
 	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t_colInd, A_t_val, rows, cols, nnz, rowNnz, A_t_rowPtr);
 	CUDAFREE(rowNnz);
-	SpMat A_t(A_t_rowPtr,A_t_colInd,A_t_val,cols,rows,nnz);
+	SpMat A_t(A_t_rowPtr,A_t_colInd,A_t_val,cols,rows,nnz,cusparseH);
 	return A_t;
 }
 

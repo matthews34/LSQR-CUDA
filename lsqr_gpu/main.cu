@@ -7,6 +7,7 @@
 #include "matmul/GPUVector.h"
 #include "lsqr_gpu.h"
 #include <cublas_v2.h>
+#include <cusparse.h>
 
 
 // reads vector from file
@@ -87,6 +88,9 @@ int main(int argc, char *argv[])
 {
 	cublasHandle_t handle;
 	cublasStatus_t status = cublasCreate(&handle);
+    cusparseHandle_t cusparseH;
+	cusparseStatus_t cusparseStat = cusparseCreate(&cusparseH);
+	assert(cusparseStat == CUSPARSE_STATUS_SUCCESS);
 	if (status != CUBLAS_STATUS_SUCCESS) {
 		printf("Error creating handle\n");
 		exit(-1);
@@ -115,7 +119,7 @@ int main(int argc, char *argv[])
 	}
 	GPUVector b(handle, vec_dim,vec_data);
 	GPUVector x(handle, n);
-	SpMat A(rowPtr, colInd, val, n, m, totalNnz);
+	SpMat A(rowPtr, colInd, val, n, m, totalNnz,cusparseH);
     auto start = std::chrono::high_resolution_clock::now();
 	lsqr(A,b,x);
     auto finish = std::chrono::high_resolution_clock::now();

@@ -3,6 +3,8 @@
 #include "GPUVector.h"
 #include <stdio.h>
 #include <cuda.h>
+#include <cusparse.h>
+
 
 #define BULK_SIZE 5
 
@@ -13,11 +15,14 @@ public:
 	int *rowPtr;
 	int *colInd;
 	double* val;
+	cusparseHandle_t cusparseH;
+	cusparseMatDescr_t descrA;
+	cusparseStatus_t cusparseStat = CUSPARSE_STATUS_SUCCESS;
 	SpMat(int, int, double*);
 	// constructor for precalculated values;
 	SpMat(	int* rowP, int* colI, double* values, 
-			int rows, int cols, int nnz) : 
-			rows(rows), cols(cols), nnz(nnz) {
+			int rows, int cols, int nnz, cusparseHandle_t cusparseH) : 
+			rows(rows), cols(cols), nnz(nnz), cusparseH(cusparseH) {
 				printf("Initializing Matrix\n");
 				cudaMalloc(&rowPtr, (rows + 1) * sizeof(int));
 				cudaMalloc(&colInd, (nnz) * sizeof(int));
@@ -25,6 +30,8 @@ public:
 				cudaMemcpy(rowPtr,rowP,sizeof(int)*(rows+1),cudaMemcpyHostToDevice);
 				cudaMemcpy(colInd,colI,sizeof(int)*nnz,cudaMemcpyHostToDevice);
 				cudaMemcpy(val,values,sizeof(double)*nnz,cudaMemcpyHostToDevice);
+				cusparseStat = cusparseCreateMatDescr(&descrA);
+				assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
 			}
 	SpMat(int rows,int cols,int nnz) : rows(rows), cols(cols), nnz(nnz) {
 		cudaMallocManaged(&rowPtr,(rows+1)*sizeof(int));

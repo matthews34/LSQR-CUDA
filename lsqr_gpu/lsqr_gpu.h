@@ -51,6 +51,10 @@ Vec sub(Vec& a, Vec& b) {
 template<typename Mat, typename Vec>
 void lsqr(Mat& A, Vec& b, Vec& x) {
 	printf("Starting lsqr()\n");
+	Vec residual_vec;
+    residual_vec = dot(A,x) - b;
+    double residual = norm(residual_vec);
+	printf("Initial residual = %f\n",residual);
     // (1) Initialization
     double beta = norm(b);
     Vec u;
@@ -58,7 +62,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
     Mat A_t = transpose(A);
     Vec v;
 	v = dot(A_t,u);
-    double alpha = norm(v);
+	double alpha = norm(v);
     v = scale(v,1/alpha);
     Vec w = v;
     double phi_hat = beta;
@@ -66,7 +70,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
     // (2) Iteration
     int it_max = size(x);
 	double epsilon = 0.001;
-    double rho, phi, c, s, theta, residual;
+    double rho, phi, c, s, theta;
     for(int i = 0; i < it_max; i++) {
         // (3) Bidiagonalization
         u = dot(A,v) - scale(u,alpha);
@@ -87,7 +91,6 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
         x = x + scale(w, phi / rho );
         w = v - scale(w, theta / rho);
         residual = 0;
-        Vec residual_vec;
         residual_vec = dot(A,x) - b;
         residual = norm(residual_vec);
 	//	printf("iteration %d: residual = %f\n",i,residual);
