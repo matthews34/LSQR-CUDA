@@ -90,7 +90,7 @@ SpMat::SpMat(int rows, int cols, double * data) : rows(rows), cols(cols) {
 __global__ void dot_kernel(	const int * rowPtr, const int * colInd, const double* val, 
 							const double* x, double* y, int row_num, int col_num, double * y_nnz){
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
-	if(rowPtr[row_num-1] - 1 < idx)
+	if(rowPtr[row_num] - 1 < idx)
 		return;
 	// each thread has to determine its row number
 	int row;
@@ -135,7 +135,7 @@ __global__ void transpose_row_nnz(const int * colInd, int cols, int nnz, int* co
 		return;
 	// increment number of ellements in your column
 	atomicAdd(colNnz + colInd[idx],1);
-	if(cols < idx)
+	if(cols + 1 < idx)
 		return;
 	if(idx == cols-1)
 		cumsum[0] = 0;
@@ -157,7 +157,7 @@ __global__ void transpose_kernel(	const int* rowPtr, const int * colInd, const d
 									int * rowInd, double* trans_val,
 									int row_num, int col_num, int nnz, int* colNnz, const int* colPtr) {
 	int idx = threadIdx.x + threadIdx.y * blockDim.x + blockIdx.x * blockDim.x * blockDim.y;
-	if(nnz - 1 < idx)
+	if(nnz < idx)
 		return;
 	// each thread has to find its row
 	int row;
