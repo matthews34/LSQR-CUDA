@@ -96,7 +96,7 @@ void lsqr(Mat& A, Vec& b, Vec& x) {
 	//	printf("iteration %d: residual = %f\n",i,residual);
         if(residual < epsilon) {
             printf("finished after %d iterations\n",i);
-			printf("residual is %f\n",residual);
+			// printf("residual is %f\n",residual);
             return;
         }
     }

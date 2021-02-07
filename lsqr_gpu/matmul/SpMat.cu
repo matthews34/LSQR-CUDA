@@ -125,11 +125,11 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 void SpMat::dot(const GPUVector & x,GPUVector & y ) {
 	// create nnz threads
 	assert(x.n == cols);
-	size_t buffer_size = 0;
+	size_t buffer_size;
 	double h_one = 1.0;
     const double h_zero = 0.0;
-	cusparseCsrmvEx_bufferSize(cusparseH,
- 					 CUSPARSE_ALG0,
+	cusparseStat = cusparseCsrmvEx_bufferSize(cusparseH,
+					 CUSPARSE_ALG_MERGE_PATH,
                      CUSPARSE_OPERATION_NON_TRANSPOSE,
                      rows,
                      cols,
@@ -144,10 +144,11 @@ void SpMat::dot(const GPUVector & x,GPUVector & y ) {
                      y.elements, CUDA_R_64F,
 					 CUDA_R_64F,
 					 &buffer_size);
-	void* buffer = NULL;
+	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
+	void* buffer;
 	cudaMalloc ((void**)&buffer, buffer_size);
 	cusparseStat = cusparseCsrmvEx(cusparseH,
-					 CUSPARSE_ALG0,
+					 CUSPARSE_ALG_MERGE_PATH,
                      CUSPARSE_OPERATION_NON_TRANSPOSE,
                      rows,
                      cols,
@@ -216,23 +217,76 @@ __global__ void transpose_kernel(	const int* rowPtr, const int * colInd, const d
 }
 
 // calls transpose kernels with nnz threads
+// SpMat SpMat::transpose() {
+// 	int *rowNnz;
+// 	int *A_t_rowPtr;
+// 	int *A_t_colInd;
+// 	double *A_t_val;
+// 	cudaMalloc(&A_t_rowPtr,(cols+1)*sizeof(int));
+// 	cudaMalloc(&A_t_colInd,nnz*sizeof(int));
+// 	cudaMalloc(&A_t_val,nnz*sizeof(double));
+// 	cudaMalloc(&rowNnz,rows*sizeof(int));
+// 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+// 	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
+// 	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
+// 	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t_colInd, A_t_val, rows, cols, nnz, rowNnz, A_t_rowPtr);
+// 	CUDAFREE(rowNnz);
+// 	SpMat A_t(A_t_rowPtr,A_t_colInd,A_t_val,cols,rows,nnz,cusparseH);
+// 	return A_t;
+// }
+
 SpMat SpMat::transpose() {
-	int *rowNnz;
-	int *A_t_rowPtr;
-	int *A_t_colInd;
-	double *A_t_val;
-	cudaMalloc(&A_t_rowPtr,(cols+1)*sizeof(int));
-	cudaMalloc(&A_t_colInd,nnz*sizeof(int));
-	cudaMalloc(&A_t_val,nnz*sizeof(double));
-	cudaMalloc(&rowNnz,rows*sizeof(int));
-	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 dimGrid(nnz/(dimBlock.x*dimBlock.y) + 1);
-	transpose_row_nnz<<<dimGrid, dimBlock>>>(colInd, cols, nnz, rowNnz, A_t_rowPtr);
-	transpose_kernel<<<dimGrid, dimBlock>>>(rowPtr, colInd, val, A_t_colInd, A_t_val, rows, cols, nnz, rowNnz, A_t_rowPtr);
-	CUDAFREE(rowNnz);
-	SpMat A_t(A_t_rowPtr,A_t_colInd,A_t_val,cols,rows,nnz,cusparseH);
-	return A_t;
+
+	size_t buffer_size = 0;
+	// preallocate all required pointers
+	int* cscColPtr = NULL;
+	int* cscRowInd = NULL;
+	double* cscVal = NULL;
+	cudaMalloc(&cscColPtr, (cols+1)*sizeof(int));
+	cudaMalloc(&cscRowInd, nnz*sizeof(int));
+	cudaMalloc(&cscVal, nnz*sizeof(double));
+	// calculate the required space
+	cusparseStat = cusparseCsr2cscEx2_bufferSize(cusparseH,
+						  rows,
+						  cols,
+						  nnz,
+						  val,
+						  rowPtr,
+						  colInd,
+						  cscVal,
+						  cscColPtr,
+						  cscRowInd,
+						  CUDA_R_64F,
+						  CUSPARSE_ACTION_NUMERIC,
+						  CUSPARSE_INDEX_BASE_ZERO,
+						  CUSPARSE_CSR2CSC_ALG1,
+						  &buffer_size);
+	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
+	// load the buffer
+	void* buffer = NULL;
+	cudaMalloc ((void**)&buffer, buffer_size);
+	// execute transposition in the buffer
+	cusparseStat = cusparseCsr2cscEx2(cusparseH,
+			   rows,
+			   cols,
+			   nnz,
+			   val,
+			   rowPtr,
+			   colInd,
+			   cscVal,
+			   cscColPtr,
+			   cscRowInd,
+			   CUDA_R_64F,
+			   CUSPARSE_ACTION_NUMERIC,
+			   CUSPARSE_INDEX_BASE_ZERO,
+			   CUSPARSE_CSR2CSC_ALG1,
+			   buffer);
+	assert(CUSPARSE_STATUS_SUCCESS == cusparseStat);
+	//create new matrix with the pointers and return it
+	SpMat mat(cscColPtr,cscRowInd,cscVal, cols, rows, nnz, cusparseH);
+	return mat;
 }
+	
 
 SpMat::~SpMat() {
 	CUDAFREE(rowPtr);

@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 	SpMat A(rowPtr, colInd, val, m, n, totalNnz, cusparseH);
 
 	printf("Starting Calculation (n = %d,m = %d)\n",n,m);
-    printf("initial residual = %f\n",norm(b));
+    // printf("initial residual = %f\n",norm(b));
 	// Start GPU timing
     cudaEvent_t evStart, evStop;
 	cudaEventCreate(&evStart);
