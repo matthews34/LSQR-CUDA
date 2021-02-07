@@ -125,17 +125,10 @@ int main(int argc, char *argv[])
 	}
 	GPUVector b(handle, vec_dim,vec_data);
 	GPUVector x(handle, n);
-	SpMat A(rowPtr, colInd, val, m, n, totalNnz, cusparseH);
 
 	printf("Starting Calculation (n = %d,m = %d)\n",n,m);
     // printf("initial residual = %f\n",norm(b));
 	// Start GPU timing
-    cudaEvent_t evStart, evStop;
-	cudaEventCreate(&evStart);
-	cudaEventCreate(&evStop);
-	cudaEventRecord(evStart, 0);
-
-	lsqr(A,b,x);
 
 	// Stop GPU timing
 	cudaEventRecord(evStop, 0);
